@@ -20,6 +20,7 @@ private slots:
     void output();
 
 private:
+    qreal R0(qreal );
     qreal doNumerov(qreal E, bool setR);
     qreal Veff(int i);
     qreal phiIntegrand(int step, qreal x);
