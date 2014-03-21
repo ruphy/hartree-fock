@@ -28,15 +28,16 @@ private:
     void stabilizeE();
     QVector< qreal > updatePhi();
 
-    const qreal dx;
-    const int xmax; // steps = xmax/dx
-
-    const qreal m,hbar,Z,e;
+    qreal dx;
+    int xmax, Z,l; // steps = xmax/dx
+    int m_steps;
+    qreal m,hbar,e;
 
     QVector<qreal> m_rho;
     QVector<qreal> m_phi;
     QVector<qreal> m_chisq;
     QVector<qreal> m_R;
+    QVector<qreal> m_ri;
 
 };
 

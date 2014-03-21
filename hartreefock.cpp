@@ -41,27 +41,32 @@ qreal hartreefock::R0(qreal r)
 
 
 hartreefock::hartreefock()
- : dx(0.005),
-   xmax(40),
-   m(1),
-   hbar(sqrt(7.6359)),
-   Z(1),
-   e(sqrt(14.409))
 {
-    int steps = xmax/dx;
+    m =1;
+    l =(0); // ang. momentum
+    hbar =(sqrt(7.6359));
+    Z = 2;
+    xmax = 50/Z;
+    dx =(0.01/Z);
+    e= (sqrt(14.409));
+    m_steps = xmax/dx;
 
+    qDebug() << xmax << dx << m_steps;
     // mesh r[i] = [dx -> xmax, delta=dx]
 
-    m_rho.resize(steps);
-    for (int i = 0; i < m_rho.size(); i++) {
-        m_rho[i] = pow(i+1, -4);
+
+    m_rho.resize(m_steps);
+    m_ri.resize(m_steps);
+
+    for (int i = 0; i < m_steps; i++) {
+        m_ri[i] = dx*(i+1);
     }
 //     m_rho.fill(pow(10,-10));
-    m_phi.resize(steps);
+    m_phi.resize(m_steps);
     m_phi.fill(0);
-    m_chisq.resize(steps);
+    m_chisq.resize(m_steps);
     m_chisq.fill(0);
-    m_R.resize(steps);
+    m_R.resize(m_steps);
     m_R.fill(0);
 
     stabilizeE();
@@ -79,7 +84,7 @@ qreal hartreefock::phiIntegrand(int step, qreal x)
 QVector< qreal > hartreefock::updatePhi()
 {
     QVector<qreal> phi;
-    phi.resize(xmax/dx + 1);
+    phi.resize(m_steps);
 
     qreal omega1 = ((qreal)128.)/225;
     qreal omega23 = ((322+13*sqrt((qreal)70))/900);
@@ -123,23 +128,24 @@ QVector< qreal > hartreefock::updatePhi()
 
 qreal hartreefock::Veff(int i)
 {
-//     qDebug() << i;
-    return -0.5*m*(2*Z*e*e/((i+1)*dx)-m_phi[i])/hbar*hbar;
+//     qDebug() << "QEFF"  </*<*/ i;
+//     return l*(l+1)/(2*pow(i,2)) - Z/i;
+    return -0.5*m*(2*Z*e*e/m_ri[i]-m_phi[i])/hbar*hbar;
 }
 
 qreal hartreefock::doNumerov(qreal E, bool setR)
 {
-    QVector<qreal> r;
-    for (qreal i = dx; i < xmax+dx; i+= dx) {
-        r.append(i);
-    }
+//     QVector<qreal> r;
+//     for (qreal i = dx; i < xmax+dx; i+= dx) {
+//         r.append(i);
+//     }
 //     qDebug() << r.first() <<r.last();
-    qreal N = r.size();
+    qreal N = m_ri.size();
 
     QVector<qreal> forward; // ufb (:1)
     QVector<qreal> backward; // ufb (:2)
-    forward.resize(r.size());
-    backward.resize(r.size());
+    forward.resize(m_ri.size());
+    backward.resize(m_ri.size());
 
 //     ufb(1,1) = m_R.first(); // R(0)
 //     ufb(2,1) = m_R.first(); // R(dx)
@@ -148,8 +154,8 @@ qreal hartreefock::doNumerov(qreal E, bool setR)
 
     forward[0] = m_R.first(); // R(dx)
     forward[1] = 0.1; // R(2dx)
-    backward[r.size()-1] = exp(sqrt(2*E)*xmax); // R(xmax)
-    backward[r.size()-2] = exp(sqrt(2*E)*(xmax-dx)); // R(xmax-dx)
+    backward[m_ri.size()-1] = exp(sqrt(2*E)*xmax); // R(xmax)
+    backward[m_ri.size()-2] = exp(sqrt(2*E)*(xmax-dx)); // R(xmax-dx)
 
 //     qDebug() << r.size();
 //     qDebug() << backward[N-(2+1) +1] << (sqrt(2*E)*(xmax-dx)) << exp(sqrt(2*E)*(xmax-dx));
@@ -167,11 +173,12 @@ qreal hartreefock::doNumerov(qreal E, bool setR)
         k3 = -2*( Veff( (N-i) -1) -E);
         k2 = -2*( Veff((N-i) ) -E);
 //         qDebug() << "muoio qui";
+//         qDebug() << (N-i)+1;
         k1 = -2*( Veff((N-i)+1) -E);
-//         qDebug() << "o forse qui";
+//         qDebug() << "o forse qui?";
 
         backward[(N-i) -1] = 2.*backward[(N-i)]*(1.-(5.0/12)*k2*dx*dx)/(1.+(1.0/12)*k3*dx*dx)
-                        - backward[(N-i) + 1]*(1.+(1.0/12)*k1*dx*dx)/(1.+(1.0/12)*k3*dx*dx);
+                              - backward[(N-i) + 1]*(1.+(1.0/12)*k1*dx*dx)/(1.+(1.0/12)*k3*dx*dx);
 
 
 //         qDebug() << "fi" << forward[i];
@@ -190,8 +197,10 @@ qreal hartreefock::doNumerov(qreal E, bool setR)
 //             return 0;
     }
 
-    qreal rc = xmax/(dx*2);
+    qreal rc = 10/Z;
+//     qDebug(r);
     qreal C = forward[rc]/backward[rc];
+//         qDebug() << "o forse allora qui?";
 
 //     qDebug() << forward[rc];
 
@@ -213,23 +222,24 @@ void hartreefock::stabilizeE()
 {
     m_R[0]= 0;
     m_rho[0] = 0;
-    for (int i = 1; i < m_R.size(); i++) {
+//     for (int i = 1; i < m_R.size(); i++) {
 //         m_R[i] = R0(i*dx);
-//         m_rho[i] = pow(m_R.at(i)/(i*dx), 2);
-        m_rho[i] = 0;
+//         m_rho[i] = pow(m_R.at(i)/(m_ri[i]), 2);
+//         m_rho[i] = 0;
 
-    }
+//     }
 
-    for (int i = 1; i < m_R.size(); i++) {
-//         m_R[i] = R0(i*dx);
-//         m_rho[i] = pow(m_R.at(i)/(i*dx), 2);
+    for (int i = 0; i < m_R.size(); i++) {
+        m_R[i] = R0(m_ri[i]);
+        m_rho[i] = pow(m_R.at(i)/m_ri[i], 2);
         m_phi[i] = 0;
 
     }
-//     m_phi = updatePhi();
+
+    m_phi = updatePhi();
     qDebug() << m_phi;
 
-    for (qreal e = 0.001; e < 5; e+=0.0001) {
+    for (qreal e = -5; e < 5; e+=0.01) {
         qreal giusto = doNumerov(e, false);
 //         if (fabs(giusto) < 1) {
             std::cout << e << ',' << giusto <<std::endl;
