@@ -15,10 +15,13 @@ public:
 
     qreal integrate(void *f);
 
+
 private slots:
     void output();
 
 private:
+    qreal doNumerov(qreal E, bool setR);
+    qreal Veff(int i);
     qreal phiIntegrand(int step, qreal x);
 
     void stabilizeE();
@@ -26,6 +29,8 @@ private:
 
     const qreal dx;
     const int xmax; // steps = xmax/dx
+
+    const qreal m,hbar,Z,e;
 
     QVector<qreal> m_rho;
     QVector<qreal> m_phi;
