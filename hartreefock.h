@@ -23,7 +23,9 @@ private:
     qreal R0(qreal );
     qreal doNumerov(qreal E, bool setR);
     qreal Veff(int i);
-    qreal phiIntegrand(int step, qreal x);
+    inline qreal phiIntegrand(int step, qreal x);
+    qreal integratedRdr2();
+
 
     void stabilizeE();
     QVector< qreal > updatePhi();
