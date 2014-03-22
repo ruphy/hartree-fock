@@ -17,11 +17,11 @@ hartreefock::hartreefock()
 {
     m = 1;
     l = 0; // ang. momentum
-    hbar = sqrt(7.6359);
+    hbar = sqrt(7.6359)/100;
     Z = 1;
     xmax = 10/Z;
     dx = 0.001/Z;
-    e = sqrt(14.409);
+    e = sqrt(14.409)/10;
     m_steps = xmax/dx;
 
     qDebug() << xmax << dx << m_steps;
@@ -75,13 +75,9 @@ QVector< qreal > hartreefock::updatePhi()
     for (int rstep = 0; rstep < m_rho.size(); rstep++) {
 
         qreal integral = 0;
-//         qDebug() << rstep;
-//         for (qreal i = -100; i < 100; i+= 0.1) {
-//             integral += phiIntegrand(rstep, i)*0.1;
-//             qDebug() << i;
-//         }
+
         // integrate for every step
-        for (qreal i = -500; i < 500; i += 0.1) {
+        for (qreal i = -1000; i < 1000; i += 0.1) {
             qreal x_i = i;
             qreal x_i1 = i+1;
             qreal c = (x_i1+x_i)/2.;
