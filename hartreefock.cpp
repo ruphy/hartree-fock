@@ -12,13 +12,12 @@ qreal hartreefock::R0(qreal r)
     return 2*pow(Zs/a, 0.5)*Zs*r*exp(-Zs*r/a)/a;
 }
 
-
 hartreefock::hartreefock()
 {
     m = 1;
     l = 0; // ang. momentum
     hbar = sqrt(7.6359)/100;
-    Z = 1;
+    Z = 2;
     xmax = 10/Z;
     dx = 0.001/Z;
     e = sqrt(14.409)/10;
@@ -34,7 +33,7 @@ hartreefock::hartreefock()
     for (int i = 0; i < m_steps; i++) {
         m_ri[i] = dx*(i+1);
     }
-//     m_rho.fill(pow(10,-10));
+
     m_phi.resize(m_steps);
     m_phi.fill(0);
     m_chisq.resize(m_steps);
@@ -48,7 +47,7 @@ hartreefock::hartreefock()
 hartreefock::~hartreefock()
 {}
 
-qreal hartreefock::phiIntegrand(int step, qreal x)
+qreal hartreefock::phiIntegrand(int step, qreal x) const
 {
 //     qDebug() << 4*3.141*x*x*m_rho.at(step)/abs(x-m_rho.at(step));
 //     qDebug() << m_ri.at(step) << x;
@@ -60,7 +59,9 @@ qreal hartreefock::phiIntegrand(int step, qreal x)
     return e*e*2*m_R.at(step)*m_R.at(step)/fabs(x-m_ri.at(step));
 }
 
-QVector< qreal > hartreefock::updatePhi()
+
+
+QVector< qreal > hartreefock::updatePhi() const
 {
     QVector<qreal> phi;
     phi.resize(m_steps);
@@ -75,9 +76,10 @@ QVector< qreal > hartreefock::updatePhi()
     for (int rstep = 0; rstep < m_rho.size(); rstep++) {
 
         qreal integral = 0;
+//         qDebug()<< "Integrating phi(" << rstep << "); m_R=" << m_R[rstep];
 
         // integrate for every step
-        for (qreal i = -1000; i < 1000; i += 0.1) {
+        for (qreal i = 0; i < xmax; i += 0.1) {
             qreal x_i = i;
             qreal x_i1 = i+1;
             qreal c = (x_i1+x_i)/2.;
@@ -98,11 +100,11 @@ QVector< qreal > hartreefock::updatePhi()
     return phi;
 }
 
-qreal hartreefock::Veff(int i)
+qreal hartreefock::Veff(int i) const
 {
 //     qDebug() << "QEFF"  </*<*/ i;
-    if (i > i) {
-        return l*(l+1)/(2*pow(i,2)) - Z/i;
+    if (i > 1) {
+        return l*(l+1)/(2*pow(m_ri[i],2)) - Z/m_ri[i];
     } else {
         return 0;
     }
@@ -120,15 +122,12 @@ qreal hartreefock::doNumerov(qreal E, bool setR)
     backward.resize(m_ri.size());
 
     forward[0] = m_R.first(); // R(dx)
-    forward[1] = 0.1; // R(2dx)
+    forward[1] = 2*dx; // R(2dx)
     backward[m_ri.size()-1] = exp(sqrt(2*E)*xmax); // R(xmax)
     backward[m_ri.size()-2] = exp(sqrt(2*E)*(xmax-dx)); // R(xmax-dx)
 
-//     qDebug() << r.size();
-//     qDebug() << backward[N-(2+1) +1] << (sqrt(2*E)*(xmax-dx)) << exp(sqrt(2*E)*(xmax-dx));
-//     return 0;
-
     for (int i=2; i < N; i++) {
+//         qDebug() << i;
         qreal k3 = -2*( Veff(i) - E);
         qreal k2 = -2*( Veff(i-1) - E);
         qreal k1 = -2*( Veff(i-2) - E);
@@ -136,35 +135,14 @@ qreal hartreefock::doNumerov(qreal E, bool setR)
                      - forward[i-2]*(1+(1.0/12)*k1*dx*dx)/(1+(1.0/12)*k3*dx*dx);
 
 
-//         if (i < N-1) {
         k3 = -2*( Veff( (N-i) -1) -E);
         k2 = -2*( Veff((N-i) ) -E);
-//         qDebug() << "muoio qui";
-//         qDebug() << (N-i)+1;
         k1 = -2*( Veff((N-i)+1) -E);
-//         qDebug() << "o forse qui?";
-
         backward[(N-i) -1] = 2.*backward[(N-i)]*(1.-(5.0/12)*k2*dx*dx)/(1.+(1.0/12)*k3*dx*dx)
                               - backward[(N-i) + 1]*(1.+(1.0/12)*k1*dx*dx)/(1.+(1.0/12)*k3*dx*dx);
-
-
-//         qDebug() << "fi" << forward[i];
-//         qDebug() << "bi" << backward[(N-i) -1];
-//         qDebug() << "bfac" << backward[N-(i+1) +1] << backward[N-(i+1) +2];
-//         qDebug() << "bfac1" << 2.*backward[N-(i+1) +1]*(1.-(5.0/12)*k2*dx*dx)/(1.+(1.0/12)*k3*dx*dx);
-//         qDebug() << "bfac2" << backward[N-(i+1) +2]*(1.+(1.0/12)*k1*dx*dx)/(1.+(1.0/12)*k3*dx*dx);
-//         qDebug() << "bfacdiff" << N-i << 2.*backward[N-(i+1) +1]*(1.-(5.0/12)*k2*dx*dx)/(1.+(1.0/12)*k3*dx*dx) -
-//                                 backward[N-(i+1) +2]*(1.+(1.0/12)*k1*dx*dx)/(1.+(1.0/12)*k3*dx*dx);
-//
-//         qDebug() << "ennes" << "k3=" << (N-i) << "k2=" << (N-i)+1 << "k1=" << (N-i)+2;
-//         qDebug() << "k1" << k1 << "k2" << k2 << "k3" << k3;
-//         qDebug() << Veff(N-(i+1));
-//         }
-//         if (i > 4)
-//             return 0;
     }
 
-    qreal rc = 10/Z;
+    qreal rc = 100;
     qreal C = forward[rc]/backward[rc];
 //         qDebug() << "o forse allora qui?";
 
@@ -221,47 +199,8 @@ qreal hartreefock::integratedRdr2()
     return result;
 }
 
-void hartreefock::stabilizeE()
+qreal hartreefock::calcNewE()
 {
-    m_R[0]= 0;
-    m_rho[0] = 0;
-
-    // Calculate R
-    for (int i = 0; i < m_R.size(); i++) {
-        m_R[i] = R0(m_ri[i]);
-    }
-
-    // Normalize R
-    qreal acc = 0;
-    foreach (const qreal el, m_R) {
-        acc += el*el;
-    }
-    acc *= dx;
-    acc = sqrt(acc);
-    foreach (qreal el, m_R) {
-        el /= acc;
-    }
-
-    // Calculate rho
-    for (int i = 0; i < m_R.size(); i++) {
-        m_rho[i] = pow(m_R.at(i)/m_ri[i], 2)/(4*3.14);
-    }
-    // Normalize rho
-    acc = 0;
-    foreach (const qreal el, m_rho) {
-        acc += el*el;
-    }
-    acc *= dx;
-    acc = sqrt(acc);
-    foreach (qreal el, m_rho) {
-        el /= acc;
-    }
-
-    qDebug() << acc;
-    m_phi = updatePhi();
-
-    qDebug() << m_phi;
-
     qreal Energy = hbar*integratedRdr2()/m;
     qDebug() << Energy;
     qreal potentialPart = 0;
@@ -270,25 +209,101 @@ void hartreefock::stabilizeE()
         potentialPart += uno*m_rho[i]*4*3.414*m_ri[i]*m_ri[i];
     }
     Energy += potentialPart*dx;
-    qDebug() << Energy;
 
-//     qDebug() << m_phi;
-/*
-    qreal increment = 0.001;
-    for (qreal e = 1.3857; e < 1.395; e+=increment) {
+    return Energy;
+}
+
+QVector<qreal> hartreefock::normalize(const QVector< qreal > &vector) const
+{
+    qDebug() << "normalizing";
+    QVector<qreal> v = vector;
+    qreal acc = 0;
+    foreach (const qreal el, v) {
+        acc += el*el;
+    }
+    acc *= dx;
+    acc = sqrt(acc);
+
+    qDebug() << "norm" << acc;
+    for (int i = 0; i < v.size(); i++) {
+        v[i] = v.at(i)/acc;
+    }
+
+    return v;
+}
+
+void hartreefock::updateRho()
+{
+    for (int i = 0; i < m_R.size(); i++) {
+        m_rho[i] = pow(m_R.at(i)/m_ri[i], 2)/(4*3.14);
+    }
+    // Normalize rho
+    normalize(m_rho);
+}
+
+void hartreefock::printVector(const QVector< qreal >& vector) const
+{
+    qDebug() << "debug started";
+    for (int rstep = 0; rstep < m_ri.size(); rstep++) {
+        std::cout << m_ri[rstep]<< ","<<m_R[rstep] << std::endl;
+    }
+    qDebug() << "--- debug ended";
+}
+
+void hartreefock::stabilizeE()
+{
+    // Calculate R
+    for (int i = 0; i < m_R.size(); i++) {
+        m_R[i] = R0(m_ri[i]);
+    }
+    m_R = normalize(m_R);
+    // Calculate rho
+    updateRho();
+    m_phi = updatePhi();
+    qDebug() << calcNewE();
+
+    QList<qreal> eigenvalues;
+
+    qreal increment = 0.01;
+    for (qreal e = 0.1; e < 2; e+=increment) {
         qreal giusto = doNumerov(e, false);
         if (fabs(giusto) < 1) {
             for (qreal ne = e; ne < e+increment; ne += increment*0.01) {
-                qreal ngiusto = doNumerov(e, false);
-                std::cout << ne << ',' << ngiusto <<std::endl;
+                qreal ngiusto = doNumerov(ne, false);
+                if (fabs(ngiusto) < 0.052) {
+                    qreal min = 10;
+                    qreal mine = 0;
+                    for (qreal nne = ne; nne < ne+increment*0.01; nne += increment*0.0001) {
+                        qreal nngiusto = doNumerov(nne, false);
+                        if (nngiusto < min) {
+                            min = nngiusto;
+                            mine = nne;
+                        }
+//                         std::cout << nne << ',' << nngiusto <<std::endl;
+                    }
+                    if (!eigenvalues.size() or fabs(eigenvalues.last() - mine) > 0.01) {
+                        eigenvalues.append(mine);
+                    }
+                }
+//                 std::cout << ne << ',' << ngiusto <<std::endl;
             }
         }
-
-                std::cout << e << ',' << giusto <<std::endl;
-
+//         std::cout << e << ',' << giusto <<std::endl;
     }
-    doNumerov(1.2372,true);
-    qDebug() << "end";*/
+    qDebug() << eigenvalues;
+
+    foreach (qreal eigen, eigenvalues) {
+        doNumerov(eigen,true);
+        m_R = normalize(m_R);
+        // Calculate rho
+        updateRho();
+        m_R = normalize(m_R);
+        printVector(m_R);
+        m_phi = updatePhi();
+//         qDebug()<< m_phi;
+        qDebug() << "eigen" << eigen<< "calc" << calcNewE();
+    }
+    qDebug() << "end";
 }
 
 qreal hartreefock::rho0(qreal r)

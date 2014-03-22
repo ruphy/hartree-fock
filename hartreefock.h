@@ -22,13 +22,18 @@ private slots:
 private:
     qreal R0(qreal );
     qreal doNumerov(qreal E, bool setR);
-    qreal Veff(int i);
-    inline qreal phiIntegrand(int step, qreal x);
+    qreal Veff(int i) const;
+    inline qreal phiIntegrand(int step, qreal x) const;
+    qreal calcNewE();
     qreal integratedRdr2();
 
+    QVector< qreal > normalize(const QVector< qreal >& vector) const;
+    void updateRho();
+
+    void printVector(const QVector< qreal >& vector) const;
 
     void stabilizeE();
-    QVector< qreal > updatePhi();
+    QVector< qreal > updatePhi() const;
 
     qreal dx;
     int xmax, Z,l; // steps = xmax/dx
