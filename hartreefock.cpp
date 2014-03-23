@@ -117,7 +117,7 @@ QVector< qreal > hartreefock::updatePhi() const
             tempint += phiIntegrand(i, m_ri[rstep]);
             tempint += phiIntegrand(i+1, m_ri[rstep])*4;
             tempint += phiIntegrand(i+2, m_ri[rstep]);
-            integral += tempint*2*dx/6.;
+            integral += tempint*dx/6.;
         }
         phi[rstep] = integral;
     }
@@ -133,11 +133,15 @@ qreal hartreefock::calcNewE()
     qreal p1 = 0;
     qreal p2 = 0;
 
-    for (int i = 0; i < m_R.size(); i++) {
+    for (int i = 0; i < m_R.size()-3; i++) {
         qreal uno = -Z*e*e*m_rho[i]*4*PI*m_ri[i];
+        uno += -Z*e*e*m_rho[i+1]*4*PI*m_ri[i+1]*4;
+        uno += -Z*e*e*m_rho[i+2]*4*PI*m_ri[i+2];
         qreal due = m_rho[i]*PI*m_ri[i]*m_ri[i]*m_phi[i];
-        p1 += uno*dx;
-        p2 += due*dx;
+        due += m_rho[i+1]*PI*m_ri[i+1]*m_ri[i+1]*m_phi[i+1]*4;
+        due += m_rho[i+2]*PI*m_ri[i+2]*m_ri[i+2]*m_phi[i+2];
+        p1 += uno*dx/6.;
+        p2 += due*dx/6.;
     }
     qDebug() << "Electrostatic" << p1;
     qDebug() << "Centrifugal" << p2;
