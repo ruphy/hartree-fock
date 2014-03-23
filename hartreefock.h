@@ -32,7 +32,10 @@ private:
 
     void printVector(const QVector< qreal >& vector) const;
 
+    qreal iterateE();
+
     void stabilizeE();
+
     QVector< qreal > updatePhi() const;
 
     qreal dx;

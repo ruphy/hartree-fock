@@ -16,11 +16,11 @@ hartreefock::hartreefock()
 {
     m = 1;
     l = 0; // ang. momentum
-    hbar = sqrt(7.6359)/100;
-    Z = 2;
-    xmax = 10/Z;
+    hbar = sqrt(7.6359);
+    Z = 1;
+    xmax = 50/Z;
     dx = 0.001/Z;
-    e = sqrt(14.409)/10;
+    e = sqrt(14.409);
     m_steps = xmax/dx;
 
     qDebug() << xmax << dx << m_steps;
@@ -103,11 +103,13 @@ QVector< qreal > hartreefock::updatePhi() const
 qreal hartreefock::Veff(int i) const
 {
 //     qDebug() << "QEFF"  </*<*/ i;
-    if (i > 1) {
+//     return m_phi[i]/2;
+
+//     if (i > 1) {
         return l*(l+1)/(2*pow(m_ri[i],2)) - Z/m_ri[i];
-    } else {
-        return 0;
-    }
+//     } else {
+//         return 0;
+//     }
 //     return -0.5*m*(2*Z*e*e/m_ri[i]-m_phi[i])/hbar*hbar;
 //     return -0.5*m*(2*Z*e*e/m_ri[i]-m_phi[i])/hbar*hbar;
 }
@@ -122,9 +124,9 @@ qreal hartreefock::doNumerov(qreal E, bool setR)
     backward.resize(m_ri.size());
 
     forward[0] = m_R.first(); // R(dx)
-    forward[1] = 2*dx; // R(2dx)
-    backward[m_ri.size()-1] = exp(sqrt(2*E)*xmax); // R(xmax)
-    backward[m_ri.size()-2] = exp(sqrt(2*E)*(xmax-dx)); // R(xmax-dx)
+    forward[1] = (m_R.at(2)-m_R.at(1))/dx; // R(2dx)
+    backward[m_ri.size()-1] = exp(-sqrt(fabs(2*E))*xmax); // R(xmax)
+    backward[m_ri.size()-2] = exp(-sqrt(fabs(2*E))*(xmax-dx)); // R(xmax-dx)
 
     for (int i=2; i < N; i++) {
 //         qDebug() << i;
@@ -149,11 +151,11 @@ qreal hartreefock::doNumerov(qreal E, bool setR)
 //     qDebug() << forward[rc];
 
     if (!setR) {
-        return C*(forward[rc-1]-backward[rc-1])/forward[rc-1];
+        return (-forward[rc-1]+C*backward[rc-1])/forward[rc-1];
     } else {
         for (int i = 0; i < m_R.size(); i++) {
             if (i < rc) {
-                m_R[i] = forward.at(i)*C;
+                m_R[i] = forward.at(i);
             } else {
                 m_R[i] = backward.at(i)*C;
             }
@@ -250,22 +252,16 @@ void hartreefock::printVector(const QVector< qreal >& vector) const
     qDebug() << "--- debug ended";
 }
 
-void hartreefock::stabilizeE()
+qreal hartreefock::iterateE()
 {
     // Calculate R
-    for (int i = 0; i < m_R.size(); i++) {
-        m_R[i] = R0(m_ri[i]);
-    }
-    m_R = normalize(m_R);
-    // Calculate rho
-    updateRho();
-    m_phi = updatePhi();
-    qDebug() << calcNewE();
+
+//     qDebug() << calcNewE();
 
     QList<qreal> eigenvalues;
 
     qreal increment = 0.01;
-    for (qreal e = 0.1; e < 2; e+=increment) {
+    for (qreal e = -10; e < 10; e+=increment) {
         qreal giusto = doNumerov(e, false);
         if (fabs(giusto) < 1) {
             for (qreal ne = e; ne < e+increment; ne += increment*0.01) {
@@ -288,23 +284,46 @@ void hartreefock::stabilizeE()
 //                 std::cout << ne << ',' << ngiusto <<std::endl;
             }
         }
-//         std::cout << e << ',' << giusto <<std::endl;
+        std::cout << e << ',' << giusto <<std::endl;
     }
     qDebug() << eigenvalues;
 
+    // WARNING this will do only one cycle
     foreach (qreal eigen, eigenvalues) {
         doNumerov(eigen,true);
         m_R = normalize(m_R);
         // Calculate rho
         updateRho();
-        m_R = normalize(m_R);
-        printVector(m_R);
+//         m_R = normalize(m_R);
+
+//          if (eigen == eigenvalues.first()) {
+            printVector(m_R);
+//          }
+
         m_phi = updatePhi();
+        m_phi = normalize(m_phi);
 //         qDebug()<< m_phi;
-        qDebug() << "eigen" << eigen<< "calc" << calcNewE();
+        return calcNewE();
+//         qDebug() << "eigen" << eigen<< "calc" << calcNewE();
     }
     qDebug() << "end";
 }
+void hartreefock::stabilizeE()
+{
+    for (int i = 0; i < m_R.size(); i++) {
+        m_R[i] = R0(m_ri[i]);
+    }
+    m_R = normalize(m_R);
+    // Calculate rho
+    updateRho();
+    m_phi = updatePhi();
+    m_phi = normalize(m_phi);
+
+    for (int i = 0; i < 100; i++) {
+        qDebug() << iterateE();
+    }
+}
+
 
 qreal hartreefock::rho0(qreal r)
 {
