@@ -10,6 +10,8 @@
 #include <root/TGraph2D.h>
 #include <root/TGraph.h>
 
+#define PI 3.14159265359
+
 qreal hartreefock::R0(qreal r)
 {
     qreal Zs = Z-5.0/16;
@@ -24,16 +26,15 @@ hartreefock::hartreefock()
     hbar = sqrt(7.6359);
     Z = 1;
     xmax = 50/Z;
-    dx = 0.001/Z;
+    dx = 0.002/Z;
     e = sqrt(14.409);
     m_steps = xmax/dx;
 
-    debugFile = new TFile("out.root", "RECREATE", "An Example ROOT file");
-    m_tree = new TTree("aTree", "tree title");
+//     debugFile = new TFile("out.root", "RECREATE", "An Example ROOT file");
+//     m_tree = new TTree("aTree", "tree title");
 
     qDebug() << xmax << dx << m_steps;
     // mesh r[i] = [dx -> xmax, delta=dx]
-
 
     m_rho.resize(m_steps);
     m_ri.resize(m_steps);
@@ -55,16 +56,51 @@ hartreefock::hartreefock()
 hartreefock::~hartreefock()
 {}
 
-qreal hartreefock::phiIntegrand(int step, qreal x) const
+void hartreefock::stabilizeE()
 {
-//     qDebug() << 4*3.141*x*x*m_rho.at(step)/abs(x-m_rho.at(step));
-//     qDebug() << m_ri.at(step) << x;
-//     return e*e*4*3.141*x*x*m_rho.at(step)/fabs(x-m_ri.at(step));
-    if (fabs(x - m_ri.at(step)) < dx*dx) { // suppress too small values
+    // Nota: R ~= wavefunction
+
+    for (int i = 0; i < m_R.size(); i++) {
+        m_R[i] = R0(m_ri[i]); // Inizializazione con wavefunction dell'orbitale idrogenico
+    }
+
+    m_R = normalize(m_R); // questa riga non dovrebbe servire, ma male non fa
+
+    m_rho = updateRho(); // Calculate rho
+    m_phi = updatePhi(); // Phi(r) = \int phiIntegrand(r') dr'
+    qDebug() << calcNewE();
+
+//     m_phi = normalize(m_phi);
+
+//     for (int i = 0; i < 100; i++) {
+//         qDebug() << iterateE();
+//     }
+}
+
+QVector< qreal > hartreefock::updateRho() const
+{
+    QVector<qreal> rho;
+    rho.resize(m_R.size());
+    for (int i = 0; i < m_R.size(); i++) {
+        rho[i] = 2*pow(m_R.at(i)/m_ri.at(i), 2)/(4*PI);
+    }
+    return rho;
+}
+
+// r' <= stepRPrime, qreal r = r
+qreal hartreefock::phiIntegrand(int stepRPrime, qreal r) const
+{
+    if (fabs(r - m_ri.at(stepRPrime)) < dx*dx) { // suppress too small values
         return 0;
     }
 
-    return e*e*2*m_R.at(step)*m_R.at(step)/fabs(x-m_ri.at(step));
+//     return e*e*2*m_R.at(step)*m_R.at(step)/fabs(x-m_ri.at(step));
+
+//     qDebug() << 4*3.141*x*x*m_rho.at(step)/abs(x-m_rho.at(step));
+//     qDebug() << m_ri.at(step) << x;
+    return e*e*4*PI*
+           pow(m_ri.at(stepRPrime),2)*
+           m_rho.at(stepRPrime)/fabs(r-m_ri.at(stepRPrime));
 }
 
 
@@ -84,23 +120,11 @@ QVector< qreal > hartreefock::updatePhi() const
     for (int rstep = 0; rstep < m_rho.size(); rstep++) {
 
         qreal integral = 0;
-//         qDebug()<< "Integrating phi(" << rstep << "); m_R=" << m_R[rstep];
 
         // integrate for every step
-        for (qreal i = 0; i < xmax; i += 0.1) {
-            qreal x_i = i;
-            qreal x_i1 = i+1;
-            qreal c = (x_i1+x_i)/2.;
-            qreal m = (x_i1-x_i)/2.;
-
-            // http://mathworld.wolfram.com/Legendre-GaussQuadrature.html
-            integral += ( m*omega1*phiIntegrand(rstep, c) );
-
-            integral += ( m*omega23*phiIntegrand(rstep, c - m*xi23) );
-            integral += ( m*omega23*phiIntegrand(rstep, c + m*xi23) );
-
-            integral += ( m*omega45*phiIntegrand(rstep, c - m*xi45) );
-            integral += ( m*omega45*phiIntegrand(rstep, c + m*xi45) );
+        for (int i = 0; i < m_rho.size(); i++) {
+            integral += phiIntegrand(i, m_ri[rstep])*dx;
+//             qDebug() << integral;
         }
 
         phi[rstep] = integral;
@@ -242,15 +266,6 @@ QVector<qreal> hartreefock::normalize(const QVector< qreal > &vector) const
     return v;
 }
 
-void hartreefock::updateRho()
-{
-    for (int i = 0; i < m_R.size(); i++) {
-        m_rho[i] = pow(m_R.at(i)/m_ri[i], 2)/(4*3.14);
-    }
-    // Normalize rho
-    normalize(m_rho);
-}
-
 void hartreefock::printVector(const QVector< qreal >& vector) const
 {
 
@@ -321,21 +336,6 @@ qreal hartreefock::iterateE()
         return calcNewE();
     }
     qDebug() << "end";
-}
-void hartreefock::stabilizeE()
-{
-    for (int i = 0; i < m_R.size(); i++) {
-        m_R[i] = R0(m_ri[i]);
-    }
-    m_R = normalize(m_R);
-    // Calculate rho
-    updateRho();
-    m_phi = updatePhi();
-    m_phi = normalize(m_phi);
-
-    for (int i = 0; i < 100; i++) {
-        qDebug() << iterateE();
-    }
 }
 
 

@@ -26,12 +26,12 @@ private:
     qreal R0(qreal );
     qreal doNumerov(qreal E, bool setR);
     qreal Veff(int i) const;
-    inline qreal phiIntegrand(int step, qreal x) const;
+    inline qreal phiIntegrand(int stepRPrime, qreal r) const;
     qreal calcNewE();
     qreal integratedRdr2();
 
     QVector< qreal > normalize(const QVector< qreal >& vector) const;
-    void updateRho();
+    QVector< qreal > updateRho() const;
 
     void printVector(const QVector< qreal >& vector) const;
 
