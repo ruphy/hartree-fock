@@ -112,8 +112,12 @@ QVector< qreal > hartreefock::updatePhi() const
     for (int rstep = 0; rstep < m_rho.size(); rstep++) {
         qreal integral = 0;
         // integrate for every step
-        for (int i = 0; i < m_rho.size(); i++) {
-            integral += phiIntegrand(i, m_ri[rstep])*dx;
+        for (int i = 0; i < m_rho.size()-3; i++) {
+            qreal tempint = 0;
+            tempint += phiIntegrand(i, m_ri[rstep]);
+            tempint += phiIntegrand(i+1, m_ri[rstep])*4;
+            tempint += phiIntegrand(i+2, m_ri[rstep]);
+            integral += tempint*2*dx/6.;
         }
         phi[rstep] = integral;
     }
