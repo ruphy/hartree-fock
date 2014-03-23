@@ -5,6 +5,11 @@
 #include <iostream>
 #include <math.h>
 
+#include <root/TFile.h>
+#include <root/TTree.h>
+#include <root/TGraph2D.h>
+#include <root/TGraph.h>
+
 qreal hartreefock::R0(qreal r)
 {
     qreal Zs = Z-5.0/16;
@@ -22,6 +27,9 @@ hartreefock::hartreefock()
     dx = 0.001/Z;
     e = sqrt(14.409);
     m_steps = xmax/dx;
+
+    debugFile = new TFile("out.root", "RECREATE", "An Example ROOT file");
+    m_tree = new TTree("aTree", "tree title");
 
     qDebug() << xmax << dx << m_steps;
     // mesh r[i] = [dx -> xmax, delta=dx]
@@ -245,11 +253,24 @@ void hartreefock::updateRho()
 
 void hartreefock::printVector(const QVector< qreal >& vector) const
 {
+
+    QString name = "vec";
+    double a;
+    TGraph g(m_ri.size());
+
+//     m_tree->Branch(name.toAscii(), &a, "blah/D");
+
+    m_tree->Branch(name.toAscii(), &g);
+
     qDebug() << "debug started";
     for (int rstep = 0; rstep < m_ri.size(); rstep++) {
-        std::cout << m_ri[rstep]<< ","<<m_R[rstep] << std::endl;
+//         std::cout << m_ri[rstep]<< ","<<m_R[rstep] << std::endl;
+        g.SetPoint(rstep, m_ri.at(rstep), vector.at(rstep));
     }
+    g.Draw("AC*");
+    m_tree->Fill();
     qDebug() << "--- debug ended";
+    debugFile->Write();
 }
 
 qreal hartreefock::iterateE()
@@ -261,12 +282,12 @@ qreal hartreefock::iterateE()
     QList<qreal> eigenvalues;
 
     qreal increment = 0.01;
-    for (qreal e = -10; e < 10; e+=increment) {
+    for (qreal e = -10; e < -9.8; e+=increment) {
         qreal giusto = doNumerov(e, false);
-        if (fabs(giusto) < 1) {
+        if (fabs(giusto) < 0.1) {
             for (qreal ne = e; ne < e+increment; ne += increment*0.01) {
                 qreal ngiusto = doNumerov(ne, false);
-                if (fabs(ngiusto) < 0.052) {
+                if (fabs(ngiusto) < 0.0052) {
                     qreal min = 10;
                     qreal mine = 0;
                     for (qreal nne = ne; nne < ne+increment*0.01; nne += increment*0.0001) {
@@ -275,36 +296,29 @@ qreal hartreefock::iterateE()
                             min = nngiusto;
                             mine = nne;
                         }
-//                         std::cout << nne << ',' << nngiusto <<std::endl;
                     }
                     if (!eigenvalues.size() or fabs(eigenvalues.last() - mine) > 0.01) {
                         eigenvalues.append(mine);
                     }
                 }
-//                 std::cout << ne << ',' << ngiusto <<std::endl;
             }
         }
         std::cout << e << ',' << giusto <<std::endl;
     }
     qDebug() << eigenvalues;
+    printVector(m_R);
 
     // WARNING this will do only one cycle
     foreach (qreal eigen, eigenvalues) {
         doNumerov(eigen,true);
         m_R = normalize(m_R);
-        // Calculate rho
         updateRho();
-//         m_R = normalize(m_R);
 
-//          if (eigen == eigenvalues.first()) {
-            printVector(m_R);
-//          }
+//         printVector(m_R);
 
         m_phi = updatePhi();
         m_phi = normalize(m_phi);
-//         qDebug()<< m_phi;
         return calcNewE();
-//         qDebug() << "eigen" << eigen<< "calc" << calcNewE();
     }
     qDebug() << "end";
 }

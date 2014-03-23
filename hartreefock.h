@@ -3,6 +3,9 @@
 
 #include <QtCore>
 
+class TFile;
+class TTree;
+
 class hartreefock : public QObject
 {
 Q_OBJECT
@@ -42,6 +45,9 @@ private:
     int xmax, Z,l; // steps = xmax/dx
     int m_steps;
     qreal m,hbar,e;
+
+    TFile *debugFile;
+    TTree *m_tree;
 
     QVector<qreal> m_rho;
     QVector<qreal> m_phi;
