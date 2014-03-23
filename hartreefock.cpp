@@ -74,11 +74,9 @@ void hartreefock::stabilizeE()
     qDebug() << m_phi[0];
     qDebug() << calcNewE();
 
-//     m_phi = normalize(m_phi);
-
-//     for (int i = 0; i < 100; i++) {
-//         qDebug() << iterateE();
-//     }
+    for (int i = 0; i < 10; i++) {
+        qDebug() << iterateE();
+    }
 }
 
 QVector< qreal > hartreefock::updateRho() const
@@ -95,14 +93,23 @@ QVector< qreal > hartreefock::updateRho() const
 // r' <= stepRPrime, qreal r = r
 qreal hartreefock::phiIntegrand(int stepRPrime, qreal r) const
 {
-    if (!fabs(r - m_ri.at(stepRPrime))) { // suppress too small values
+//     if (fabs(r - m_ri.at(stepRPrime)) < 0.01) { // suppress too small values
+//         return 0;
+//     }
+    if (r == m_ri.at(stepRPrime)) { // suppress too small values
         return 0;
     }
 
-    return e*e*4*PI*
-           pow(m_ri.at(stepRPrime),2)*
+    // FIXME FANCULO MI SONO DIMENTICATO UN 4PI
+    return e*e*pow(m_ri.at(stepRPrime),2)*
            m_rho.at(stepRPrime)/fabs(r-m_ri.at(stepRPrime));
 }
+
+QVector< qreal > hartreefock::phiDifferencial(const QVector< qreal >& in) const
+{
+
+}
+
 
 QVector< qreal > hartreefock::updatePhi() const
 {
@@ -112,7 +119,7 @@ QVector< qreal > hartreefock::updatePhi() const
     for (int rstep = 0; rstep < m_rho.size(); rstep++) {
         qreal integral = 0;
         // integrate for every step
-        for (int i = 0; i < m_rho.size()-3; i++) {
+        for (int i = 0; i < m_rho.size()-2; i++) {
             qreal tempint = 0;
             tempint += phiIntegrand(i, m_ri[rstep]);
             tempint += phiIntegrand(i+1, m_ri[rstep])*4;
@@ -132,17 +139,19 @@ qreal hartreefock::calcNewE()
 //     qDebug() << m_rho;
     qreal p1 = 0;
     qreal p2 = 0;
+    qreal Zs = Z;//-5.0/16;
 
-    for (int i = 0; i < m_R.size()-3; i++) {
-        qreal uno = -Z*e*e*m_rho[i]*4*PI*m_ri[i];
-        uno += -Z*e*e*m_rho[i+1]*4*PI*m_ri[i+1]*4;
-        uno += -Z*e*e*m_rho[i+2]*4*PI*m_ri[i+2];
+    for (int i = 0; i < m_R.size()-2; i++) {
+        qreal uno = -Zs*e*e*m_rho[i]*4*PI*m_ri[i];
+        uno += -Zs*e*e*m_rho[i+1]*4*PI*m_ri[i+1]*4;
+        uno += -Zs*e*e*m_rho[i+2]*4*PI*m_ri[i+2];
         qreal due = m_rho[i]*PI*m_ri[i]*m_ri[i]*m_phi[i];
         due += m_rho[i+1]*PI*m_ri[i+1]*m_ri[i+1]*m_phi[i+1]*4;
         due += m_rho[i+2]*PI*m_ri[i+2]*m_ri[i+2]*m_phi[i+2];
         p1 += uno*dx/6.;
         p2 += due*dx/6.;
     }
+
     qDebug() << "Electrostatic" << p1;
     qDebug() << "Centrifugal" << p2;
     Energy += p1+p2;
@@ -150,6 +159,57 @@ qreal hartreefock::calcNewE()
     return Energy;
 }
 
+
+
+qreal hartreefock::iterateE()
+{
+    // Calculate R
+
+//     qDebug() << calcNewE();
+
+    QList<qreal> eigenvalues;
+
+    qreal increment = 0.01;
+    for (qreal e = -10; e < -9.8; e+=increment) {
+        qreal giusto = doNumerov(e, false);
+        if (fabs(giusto) < 0.1) {
+            for (qreal ne = e; ne < e+increment; ne += increment*0.01) {
+                qreal ngiusto = doNumerov(ne, false);
+                if (fabs(ngiusto) < 0.0052) {
+                    qreal min = 10;
+                    qreal mine = 0;
+                    for (qreal nne = ne; nne < ne+increment*0.01; nne += increment*0.0001) {
+                        qreal nngiusto = doNumerov(nne, false);
+                        if (nngiusto < min) {
+                            min = nngiusto;
+                            mine = nne;
+                        }
+                    }
+                    if (!eigenvalues.size() or fabs(eigenvalues.last() - mine) > 0.01) {
+                        eigenvalues.append(mine);
+                    }
+                }
+            }
+        }
+        std::cout << e << ',' << giusto <<std::endl;
+    }
+    qDebug() << eigenvalues;
+//     printVector(m_R);
+
+    // WARNING this will do only one cycle
+    foreach (qreal eigen, eigenvalues) {
+        doNumerov(eigen,true);
+        m_R = normalize(m_R);
+        updateRho();
+
+//         printVector(m_R);
+
+        m_phi = updatePhi();
+        m_phi = normalize(m_phi);
+        return calcNewE();
+    }
+    qDebug() << "end";
+}
 
 qreal hartreefock::Veff(int i) const
 {
@@ -276,56 +336,6 @@ void hartreefock::printVector(const QVector< qreal >& vector) const
 //     g.Draw("AC*");
     qDebug() << "--- debug ended";
     debugFile->Write();
-}
-
-qreal hartreefock::iterateE()
-{
-    // Calculate R
-
-//     qDebug() << calcNewE();
-
-    QList<qreal> eigenvalues;
-
-    qreal increment = 0.01;
-    for (qreal e = -10; e < -9.8; e+=increment) {
-        qreal giusto = doNumerov(e, false);
-        if (fabs(giusto) < 0.1) {
-            for (qreal ne = e; ne < e+increment; ne += increment*0.01) {
-                qreal ngiusto = doNumerov(ne, false);
-                if (fabs(ngiusto) < 0.0052) {
-                    qreal min = 10;
-                    qreal mine = 0;
-                    for (qreal nne = ne; nne < ne+increment*0.01; nne += increment*0.0001) {
-                        qreal nngiusto = doNumerov(nne, false);
-                        if (nngiusto < min) {
-                            min = nngiusto;
-                            mine = nne;
-                        }
-                    }
-                    if (!eigenvalues.size() or fabs(eigenvalues.last() - mine) > 0.01) {
-                        eigenvalues.append(mine);
-                    }
-                }
-            }
-        }
-        std::cout << e << ',' << giusto <<std::endl;
-    }
-    qDebug() << eigenvalues;
-//     printVector(m_R);
-
-    // WARNING this will do only one cycle
-    foreach (qreal eigen, eigenvalues) {
-        doNumerov(eigen,true);
-        m_R = normalize(m_R);
-        updateRho();
-
-//         printVector(m_R);
-
-        m_phi = updatePhi();
-        m_phi = normalize(m_phi);
-        return calcNewE();
-    }
-    qDebug() << "end";
 }
 
 
