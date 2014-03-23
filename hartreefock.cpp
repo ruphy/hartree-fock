@@ -26,7 +26,7 @@ hartreefock::hartreefock()
     hbar = sqrt(7.6359);
     Z = 1;
     xmax = 50/Z;
-    dx = 0.01/Z;
+    dx = 0.001/Z;
     e = sqrt(14.409);
     m_steps = xmax/dx;
 
@@ -135,11 +135,12 @@ QVector< qreal > hartreefock::updatePhi() const
 qreal hartreefock::calcNewE()
 {
     qreal Energy = hbar*hbar*integratedRdr2()/m;
-    qDebug() << Energy;
+    qDebug() << "ke" << Energy;
+
     qreal potentialPart = 0;
     for (int i= 0; i < m_R.size(); i++) {
         qreal uno = -Z*e*e/m_ri[i] + m_phi[i]/4.;
-        potentialPart += uno*m_rho[i]*4*3.414*m_ri[i]*m_ri[i];
+        potentialPart += uno*m_rho[i]*4*PI*m_ri[i]*m_ri[i]*dx;
     }
     Energy += potentialPart*dx;
 
@@ -193,9 +194,6 @@ qreal hartreefock::doNumerov(qreal E, bool setR)
 
     qreal rc = 100;
     qreal C = forward[rc]/backward[rc];
-//         qDebug() << "o forse allora qui?";
-
-//     qDebug() << forward[rc];
 
     if (!setR) {
         return (-forward[rc-1]+C*backward[rc-1])/forward[rc-1];
@@ -213,61 +211,14 @@ qreal hartreefock::doNumerov(qreal E, bool setR)
 
 QVector< qreal > hartreefock::differenciate(const QVector< qreal > &in) const
 {
-//     qDebug();
     QVector<qreal> der;
     der.resize(in.size());
     for (int i = 0; i < in.size()-1; i++) {
-//         qDebug() << "wa";
         der[i] = (in.at(i+1) - in.at(i))/dx;
     }
 
     der.append(der.last());
     return der;
-//     double k1_x, k2_x, k2_v, k3_v, k3_x, k4_v, k4_x, k1_v;
-//     QVector<qreal> der;
-//     qreal dt = dx;
-//     int n_cicli = in.size()-1;
-//     der.resize(in.size());
-//     der[0] = (in.at(1)-in.at(0))/dx; // first order approximation
-//
-//     for(unsigned int i = 0; i < n_cicli; ++i){
-//         double xf;
-//    double h,k1,k2,k3,k4;
-//
-// //    h  = tf-ti;
-//    qreal ti = m_ri[i];
-//    qreal tf = m_ri[i+1];
-//    h = dx;
-// //    k1 = h*f(ti,xi);
-//
-//
-//    k1 = h*f(ti,xi);
-//    k2 = h*f(ti+h/2.0,xi+k1/2.0);
-//    k3 = h*f(ti+h/2.0,xi+k2/2.0);
-//    k4 = h*f(ti+h,xi+k3);
-//
-//    xf = xi + (k1 + 2.0*(k2+k3) + k4)/6.0;
-//    return xf;
-//
-//         k1_x = der[i]*dt;
-//         k1_v = - in.at(i)*dt;
-//         /// der[i+1] = der[i] + k1_v*0.5;
-//         /// in[i+1] = in[i] + k1_x*0.5;
-//         k2_x = (der[i] + k1_v*0.5)*dt;
-//         k2_v = -(in.at(i) + k1_x*0.5)*dt;
-//         ///der[i+1] = der[i] + k2_v*0.5;
-//         ///in[i+1] = in[i] + k2_x*0.5;
-//         k3_x =(der[i]+k2_v*0.5)*dt;
-//         k3_v= -(in.at(i)+k2_x*0.5)*dt;
-//         ///der[i+1] = der[i] + k3_v*0.5;
-//         ///in[i+1] = in[i] + k3_x*0.5;
-//         k4_x =(der.at(i)+k3_v)*dt;
-//         k4_v =-(in.at(i)+k3_x)*dt;
-//         in[i+1] = in.at(i) + (k1_x+2.0*k2_x+2.0*k3_x+k4_x)/(6.0);
-//         der[i+1] = der.at(i) + (k1_v+2.0*k2_v+2.0*k3_v+k4_v)/(6.0);
-//     }
-
-
 }
 
 qreal hartreefock::integratedRdr2()
