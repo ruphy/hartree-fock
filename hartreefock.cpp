@@ -25,8 +25,8 @@ hartreefock::hartreefock()
     l = 0; // ang. momentum
     hbar = sqrt(7.6359);
     Z = 1;
-    xmax = 50/Z;
-    dx = 0.001/Z;
+    xmax = 100/Z;
+    dx = 0.01/Z;
     e = sqrt(14.409);
     m_steps = xmax/dx;
 
@@ -103,14 +103,10 @@ QVector< qreal > hartreefock::updateRho() const
 // r' <= stepRPrime, qreal r = r
 qreal hartreefock::phiIntegrand(int stepRPrime, qreal r) const
 {
-    if (fabs(r - m_ri.at(stepRPrime)) < dx*dx) { // suppress too small values
+    if (!fabs(r - m_ri.at(stepRPrime))) { // suppress too small values
         return 0;
     }
 
-//     return e*e*2*m_R.at(step)*m_R.at(step)/fabs(x-m_ri.at(step));
-
-//     qDebug() << 4*3.141*x*x*m_rho.at(step)/abs(x-m_rho.at(step));
-//     qDebug() << m_ri.at(step) << x;
     return e*e*4*PI*
            pow(m_ri.at(stepRPrime),2)*
            m_rho.at(stepRPrime)/fabs(r-m_ri.at(stepRPrime));
@@ -135,14 +131,20 @@ QVector< qreal > hartreefock::updatePhi() const
 qreal hartreefock::calcNewE()
 {
     qreal Energy = hbar*hbar*integratedRdr2()/m;
-    qDebug() << "ke" << Energy;
+    qDebug() << "Ke" << Energy;
 
-    qreal potentialPart = 0;
-    for (int i= 0; i < m_R.size(); i++) {
-        qreal uno = -Z*e*e/m_ri[i] + m_phi[i]/4.;
-        potentialPart += uno*m_rho[i]*4*PI*m_ri[i]*m_ri[i]*dx;
+    qreal p1 = 0;
+    qreal p2 = 0;
+
+    for (int i = 0; i < m_R.size(); i++) {
+        qreal uno = -Z*e*e*m_rho[i]*4*PI*m_ri[i];
+        qreal due = m_rho[i]*PI*m_ri[i]*m_ri[i]*m_phi[i];
+        p1 += uno*dx;
+        p2 += due*dx;
     }
-    Energy += potentialPart*dx;
+    qDebug() << "Electrostatic" << p1;
+    qDebug() << "Centrifugal" << p2;
+    Energy += p1+p2;
 
     return Energy;
 }
