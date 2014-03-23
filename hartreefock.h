@@ -30,6 +30,8 @@ private:
     qreal calcNewE();
     qreal integratedRdr2();
 
+    QVector<qreal> differenciate(const QVector< qreal >& in) const;
+
     QVector< qreal > normalize(const QVector< qreal >& vector) const;
     QVector< qreal > updateRho() const;
 
