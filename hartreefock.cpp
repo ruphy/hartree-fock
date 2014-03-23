@@ -5,8 +5,8 @@
 #include <iostream>
 #include <math.h>
 
-// #include <root/TFile.h>
-// #include <root/TTree.h>
+#include <root/TFile.h>
+#include <root/TTree.h>
 // #include <root/TGraph2D.h>
 // #include <root/TGraph.h>
 
@@ -25,13 +25,13 @@ hartreefock::hartreefock()
     l = 0; // ang. momentum
     hbar = sqrt(7.6359);
     Z = 1;
-    xmax = 100/Z;
-    dx = 0.01/Z;
+    xmax = 10/Z;
+    dx = 0.001/Z;
     e = sqrt(14.409);
     m_steps = xmax/dx;
 
-//     debugFile = new TFile("out.root", "RECREATE", "An Example ROOT file");
-//     m_tree = new TTree("aTree", "tree title");
+    debugFile = new TFile("out.root", "RECREATE", "An Example ROOT file");
+    m_tree = new TTree("bTree", "tree title");
 
     qDebug() << xmax << dx << m_steps;
     // mesh r[i] = [dx -> xmax, delta=dx]
@@ -42,19 +42,6 @@ hartreefock::hartreefock()
     for (int i = 0; i < m_steps; i++) {
         m_ri[i] = dx*(i+1);
     }
-
-//     QVector<qreal> sinv;
-//
-//     sinv.resize(m_steps);
-//
-//     for (int i = 0; i < m_steps; i++) {
-//         sinv[i] = sin(m_ri.at(i));
-//     }
-//
-//     QVector<qreal> cosv = differenciate(sinv);
-//     foreach(qreal el, cosv) {
-//         std::cout << el;
-//     }
 
     m_phi.resize(m_steps);
     m_phi.fill(0);
@@ -78,9 +65,13 @@ void hartreefock::stabilizeE()
     }
 
     m_R = normalize(m_R); // questa riga non dovrebbe servire, ma male non fa
-
     m_rho = updateRho(); // Calculate rho
+
     m_phi = updatePhi(); // Phi(r) = \int phiIntegrand(r') dr'
+
+    printVector(m_phi);
+
+    qDebug() << m_phi[0];
     qDebug() << calcNewE();
 
 //     m_phi = normalize(m_phi);
@@ -96,6 +87,7 @@ QVector< qreal > hartreefock::updateRho() const
     rho.resize(m_R.size());
     for (int i = 0; i < m_R.size(); i++) {
         rho[i] = 2*pow(m_R.at(i)/m_ri.at(i), 2)/(4*PI);
+//         qDebug() << "rho(" <<m_ri.at(i) << ")=" << rho.at(i);
     }
     return rho;
 }
@@ -131,8 +123,9 @@ QVector< qreal > hartreefock::updatePhi() const
 qreal hartreefock::calcNewE()
 {
     qreal Energy = hbar*hbar*integratedRdr2()/m;
-    qDebug() << "Ke" << Energy;
+    qDebug() << "KE" << Energy;
 
+//     qDebug() << m_rho;
     qreal p1 = 0;
     qreal p2 = 0;
 
@@ -257,22 +250,24 @@ void hartreefock::printVector(const QVector< qreal >& vector) const
 {
 
     QString name = "vec";
-    double a;
+    double x, y;
 //     TGraph g(m_ri.size());
 
-//     m_tree->Branch(name.toAscii(), &a, "blah/D");
-
+    m_tree->Branch("x", &x);
+    m_tree->Branch("y", &y);
 //     m_tree->Branch(name.toAscii(), &g);
 
     qDebug() << "debug started";
     for (int rstep = 0; rstep < m_ri.size(); rstep++) {
 //         std::cout << m_ri[rstep]<< ","<<m_R[rstep] << std::endl;
 //         g.SetPoint(rstep, m_ri.at(rstep), vector.at(rstep));
+        x = m_ri.at(rstep);
+        y = vector.at(rstep)*m_rho.at(rstep);
+        m_tree->Fill();
     }
 //     g.Draw("AC*");
-//     m_tree->Fill();
     qDebug() << "--- debug ended";
-//     debugFile->Write();
+    debugFile->Write();
 }
 
 qreal hartreefock::iterateE()
@@ -308,7 +303,7 @@ qreal hartreefock::iterateE()
         std::cout << e << ',' << giusto <<std::endl;
     }
     qDebug() << eigenvalues;
-    printVector(m_R);
+//     printVector(m_R);
 
     // WARNING this will do only one cycle
     foreach (qreal eigen, eigenvalues) {
