@@ -24,7 +24,7 @@ hartreefock::hartreefock()
     m = 1;
     l = 0; // ang. momentum
     hbar = sqrt(7.6359);
-    Z = 1;
+    Z = 2;
     xmax = 10/Z;
     dx = 0.001/Z;
     e = sqrt(14.409);
@@ -74,9 +74,16 @@ void hartreefock::stabilizeE()
     qDebug() << m_phi[0];
     qDebug() << calcNewE();
 
-    for (int i = 0; i < 10; i++) {
-        qDebug() << iterateE();
+
+    for (int i = 0; i < m_R.size(); i++) {
+        m_phi[i] = 0; // Inizializazione con wavefunction dell'orbitale idrogenico
     }
+
+    qDebug() << calcNewE();
+
+//     for (int i = 0; i < 1; i++) {
+//         qDebug() << iterateE();
+//     }
 }
 
 QVector< qreal > hartreefock::updateRho() const
@@ -93,9 +100,6 @@ QVector< qreal > hartreefock::updateRho() const
 // r' <= stepRPrime, qreal r = r
 qreal hartreefock::phiIntegrand(int stepRPrime, qreal r) const
 {
-//     if (fabs(r - m_ri.at(stepRPrime)) < 0.01) { // suppress too small values
-//         return 0;
-//     }
     if (r == m_ri.at(stepRPrime)) { // suppress too small values
         return 0;
     }
@@ -169,13 +173,13 @@ qreal hartreefock::iterateE()
 
     QList<qreal> eigenvalues;
 
-    qreal increment = 0.01;
-    for (qreal e = -10; e < -9.8; e+=increment) {
+    qreal increment = 0.1;
+    for (qreal e = -15; e < 0; e+=increment) {
         qreal giusto = doNumerov(e, false);
         if (fabs(giusto) < 0.1) {
             for (qreal ne = e; ne < e+increment; ne += increment*0.01) {
                 qreal ngiusto = doNumerov(ne, false);
-                if (fabs(ngiusto) < 0.0052) {
+                if (fabs(ngiusto) < 0.0001) {
                     qreal min = 10;
                     qreal mine = 0;
                     for (qreal nne = ne; nne < ne+increment*0.01; nne += increment*0.0001) {
@@ -186,26 +190,39 @@ qreal hartreefock::iterateE()
                         }
                     }
                     if (!eigenvalues.size() or fabs(eigenvalues.last() - mine) > 0.01) {
+
                         eigenvalues.append(mine);
                     }
+
                 }
+
+                std::cout << ne << ',' << ngiusto <<std::endl;
             }
         }
-        std::cout << e << ',' << giusto <<std::endl;
     }
     qDebug() << eigenvalues;
 //     printVector(m_R);
 
+    // Z=2 -> -16.439
+    // (-16.439, -11.484, -11.473, -11.462, -11.451, -11.44, -11.429,
+    // -11.418, -11.407, -11.397, -8.451, -8.44, -8.429, -8.418, -8.407,
+    // -8.397, -8.386, -8.375, -6.428, -6.418, -6.408, -6.397, -6.387,
+    // -6.377, -6.367, -4.595, -4.585, -2.40401, -0.04201, -0.03201, -0.022, -0.012)
+
+    // Z = 1
+    // (-4.109, -2.87001, -2.85901, -2.84801, -2.11201, -2.10101, -1.60601,
+    // -1.59601, -1.14801, -0.6, -0.009)
+
     // WARNING this will do only one cycle
     foreach (qreal eigen, eigenvalues) {
         doNumerov(eigen,true);
-        m_R = normalize(m_R);
-        updateRho();
+//         m_R = normalize(m_R);
+//         updateRho();
 
 //         printVector(m_R);
 
-        m_phi = updatePhi();
-        m_phi = normalize(m_phi);
+//         m_phi = updatePhi();
+//         m_phi = normalize(m_phi);
         return calcNewE();
     }
     qDebug() << "end";
@@ -217,11 +234,11 @@ qreal hartreefock::Veff(int i) const
 //     return m_phi[i]/2;
 
 //     if (i > 1) {
-        return l*(l+1)/(2*pow(m_ri[i],2)) - Z/m_ri[i];
+//         return l*(l+1)/(2*pow(m_ri[i],2)) - Z/m_ri[i];
 //     } else {
 //         return 0;
 //     }
-//     return -0.5*m*(2*Z*e*e/m_ri[i]-m_phi[i])/hbar*hbar;
+    return -0.5*m*(2*Z*e*e/m_ri[i]-m_phi[i])/(hbar*hbar);
 //     return -0.5*m*(2*Z*e*e/m_ri[i]-m_phi[i])/hbar*hbar;
 }
 
@@ -255,7 +272,7 @@ qreal hartreefock::doNumerov(qreal E, bool setR)
                               - backward[(N-i) + 1]*(1.+(1.0/12)*k1*dx*dx)/(1.+(1.0/12)*k3*dx*dx);
     }
 
-    qreal rc = 100;
+    int rc = m_steps/2;
     qreal C = forward[rc]/backward[rc];
 
     if (!setR) {
