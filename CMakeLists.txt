@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 2.6)
 find_package(Qt4 REQUIRED)
 find_package(ROOT REQUIRED)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
+
 include_directories(${QT_INCLUDES} ${ROOT_INCLUDE_DIR}  ${CMAKE_CURRENT_BINARY_DIR})
 
 set(hartreefock_SRCS hartreefock.cpp main.cpp)
