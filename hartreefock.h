@@ -51,9 +51,11 @@ private:
     int m_steps;
     qreal m,hbar,e;
 
+#ifdef ROOT
     TFile *debugFile;
     TTree *m_tree;
-
+#endif
+    
     QVector<qreal> m_rho;
     QVector<qreal> m_phi;
     QVector<qreal> m_chisq;

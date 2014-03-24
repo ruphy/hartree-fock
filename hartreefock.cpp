@@ -5,8 +5,10 @@
 #include <iostream>
 #include <math.h>
 
+#ifdef ROOT
 #include <root/TFile.h>
 #include <root/TTree.h>
+#endif
 // #include <root/TGraph2D.h>
 // #include <root/TGraph.h>
 
@@ -32,8 +34,10 @@ hartreefock::hartreefock()
     e = sqrt(14.409);
     m_steps = xmax/dx;
 
+#ifdef ROOT
     debugFile = new TFile("out.root", "RECREATE", "An Example ROOT file");
     m_tree = new TTree("bTree", "tree title");
+#endif
 
     qDebug() << xmax << dx << m_steps;
     // mesh r[i] = [dx -> xmax, delta=dx]
@@ -90,18 +94,21 @@ void hartreefock::stabilizeE()
 //     qDebug() << "Phi = 0";
 //     qDebug() << calcNewE();
 
-
+#ifdef ROOT
     m_tree->Branch("energia", &m_energy);
     m_tree->Branch("eigenvalue", &m_eigenvalue);
     m_tree->Branch("iterazione", &m_iteration);
+#endif
     for (int i = 0; i < 500; i++) {
         m_iteration = i;
         qDebug() << "--------";
         qDebug() << "Iterando sugli autovalori... iterazione" << i;
         qDebug() << "ENERGIA: " << iterateE(i);
 
+#ifdef ROOT
         m_tree->Fill();
         debugFile->Write();
+#endif
     }
 }
 
@@ -336,7 +343,7 @@ QVector<qreal> hartreefock::normalize(const QVector< qreal > &vector) const
 
 void hartreefock::printVector(const QVector< qreal >& vector) const
 {
-
+#ifdef ROOT
     QString name = "vec";
     double x, y;
 //     TGraph g(m_ri.size());
@@ -356,6 +363,8 @@ void hartreefock::printVector(const QVector< qreal >& vector) const
 //     g.Draw("AC*");
     qDebug() << "--- debug ended";
     debugFile->Write();
+
+#endif
 }
 
 
