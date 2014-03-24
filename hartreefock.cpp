@@ -24,7 +24,7 @@ hartreefock::hartreefock()
     m = 1;
     l = 0; // ang. momentum
     hbar = sqrt(7.6359);
-    Z = 2;
+    Z = 1;
     xmax = 10/Z;
     dx = 0.001/Z;
     e = sqrt(14.409);
@@ -38,9 +38,15 @@ hartreefock::hartreefock()
 
     m_rho.resize(m_steps);
     m_ri.resize(m_steps);
+    m_dx.resize(m_steps+1);
+
+    for (int i = 0; i < m_steps+1; i++) {
+        m_dx[i] = dx;//*log(i+2);
+//         std::cout << dx*log(i) << std::endl;
+    }
 
     for (int i = 0; i < m_steps; i++) {
-        m_ri[i] = dx*(i+1);
+        m_ri[i] = m_dx.at(i)*(i+1);
     }
 
     m_phi.resize(m_steps);
@@ -109,12 +115,6 @@ qreal hartreefock::phiIntegrand(int stepRPrime, qreal r) const
            m_rho.at(stepRPrime)/fabs(r-m_ri.at(stepRPrime));
 }
 
-QVector< qreal > hartreefock::phiDifferencial(const QVector< qreal >& in) const
-{
-
-}
-
-
 QVector< qreal > hartreefock::updatePhi() const
 {
     QVector<qreal> phi;
@@ -125,10 +125,10 @@ QVector< qreal > hartreefock::updatePhi() const
         // integrate for every step
         for (int i = 0; i < m_rho.size()-2; i++) {
             qreal tempint = 0;
-            tempint += phiIntegrand(i, m_ri[rstep]);
-            tempint += phiIntegrand(i+1, m_ri[rstep])*4;
-            tempint += phiIntegrand(i+2, m_ri[rstep]);
-            integral += tempint*dx/6.;
+            tempint += phiIntegrand(i, m_ri[rstep])*m_dx.at(i);
+            tempint += phiIntegrand(i+1, m_ri[rstep])*4*m_dx.at(i+1);
+            tempint += phiIntegrand(i+2, m_ri[rstep])*m_dx.at(i+2);
+            integral += tempint/6.;
         }
         phi[rstep] = integral;
     }
@@ -146,14 +146,17 @@ qreal hartreefock::calcNewE()
     qreal Zs = Z;//-5.0/16;
 
     for (int i = 0; i < m_R.size()-2; i++) {
-        qreal uno = -Zs*e*e*m_rho[i]*4*PI*m_ri[i];
-        uno += -Zs*e*e*m_rho[i+1]*4*PI*m_ri[i+1]*4;
-        uno += -Zs*e*e*m_rho[i+2]*4*PI*m_ri[i+2];
-        qreal due = m_rho[i]*PI*m_ri[i]*m_ri[i]*m_phi[i];
-        due += m_rho[i+1]*PI*m_ri[i+1]*m_ri[i+1]*m_phi[i+1]*4;
-        due += m_rho[i+2]*PI*m_ri[i+2]*m_ri[i+2]*m_phi[i+2];
-        p1 += uno*dx/6.;
-        p2 += due*dx/6.;
+
+        qreal uno = -Zs*e*e*m_rho[i]*4*PI*m_ri[i]*m_dx.at(i);
+        uno += -Zs*e*e*m_rho[i+1]*4*PI*m_ri[i+1]*4*m_dx.at(i+1);
+        uno += -Zs*e*e*m_rho[i+2]*4*PI*m_ri[i+2]*m_dx.at(i+2);
+
+        qreal due = m_rho[i]*PI*m_ri[i]*m_ri[i]*m_phi[i]*m_dx.at(i);
+        due += m_rho[i+1]*PI*m_ri[i+1]*m_ri[i+1]*m_phi[i+1]*4*m_dx.at(i+1);
+        due += m_rho[i+2]*PI*m_ri[i+2]*m_ri[i+2]*m_phi[i+2]*m_dx.at(i+2);
+
+        p1 += uno/6.;
+        p2 += due/6.;
     }
 
     qDebug() << "Electrostatic" << p1;
@@ -254,22 +257,24 @@ qreal hartreefock::doNumerov(qreal E, bool setR)
     forward[0] = m_R.first(); // R(dx)
     forward[1] = (m_R.at(2)-m_R.at(1))/dx; // R(2dx)
     backward[m_ri.size()-1] = exp(-sqrt(fabs(2*E))*xmax); // R(xmax)
-    backward[m_ri.size()-2] = exp(-sqrt(fabs(2*E))*(xmax-dx)); // R(xmax-dx)
+    backward[m_ri.size()-2] = exp(-sqrt(fabs(2*E))*(xmax-m_dx.last())); // R(xmax-dx)
 
     for (int i=2; i < N; i++) {
 //         qDebug() << i;
-        qreal k3 = -2*( Veff(i) - E);
-        qreal k2 = -2*( Veff(i-1) - E);
-        qreal k1 = -2*( Veff(i-2) - E);
-        forward[i] = 2*forward[i-1]*(1-(5.0/12)*k2*dx*dx)/(1+(1.0/12)*k3*dx*dx)
-                     - forward[i-2]*(1+(1.0/12)*k1*dx*dx)/(1+(1.0/12)*k3*dx*dx);
+
+        qreal k3 = -2*( Veff(i) - E)*pow(m_dx.at(i),2);
+        qreal k2 = -2*( Veff(i-1) - E)*pow(m_dx.at(i-1),2);
+        qreal k1 = -2*( Veff(i-2) - E)*pow(m_dx.at(i-2),2);
+
+        forward[i] = 2*forward[i-1]*(1-(5.0/12)*k2)/(1+(1.0/12)*k3)
+                     - forward[i-2]*(1+(1.0/12)*k1)/(1+(1.0/12)*k3);
 
 
-        k3 = -2*( Veff( (N-i) -1) -E);
-        k2 = -2*( Veff((N-i) ) -E);
-        k1 = -2*( Veff((N-i)+1) -E);
-        backward[(N-i) -1] = 2.*backward[(N-i)]*(1.-(5.0/12)*k2*dx*dx)/(1.+(1.0/12)*k3*dx*dx)
-                              - backward[(N-i) + 1]*(1.+(1.0/12)*k1*dx*dx)/(1.+(1.0/12)*k3*dx*dx);
+        k3 = -2*( Veff( (N-i) -1) -E)*pow(m_dx.at((N-i) -1),2);
+        k2 = -2*( Veff((N-i) ) -E)*pow(m_dx.at(N-i),2);
+        k1 = -2*( Veff((N-i)+1) -E)*pow(m_dx.at((N-i) +1),2);
+        backward[(N-i) -1] = 2.*backward[(N-i)]*(1.-(5.0/12)*k2)/(1.+(1.0/12)*k3)
+                              - backward[(N-i) + 1]*(1.+(1.0/12)*k1)/(1.+(1.0/12)*k3);
     }
 
     int rc = m_steps/2;
@@ -294,7 +299,7 @@ QVector< qreal > hartreefock::differenciate(const QVector< qreal > &in) const
     QVector<qreal> der;
     der.resize(in.size());
     for (int i = 0; i < in.size()-1; i++) {
-        der[i] = (in.at(i+1) - in.at(i))/dx;
+        der[i] = (in.at(i+1) - in.at(i))/m_dx.at(i);
     }
 
     der.append(der.last());
@@ -305,10 +310,9 @@ qreal hartreefock::integratedRdr2()
 {
     QVector<qreal> der = differenciate(m_R);
     qreal result = 0;
-    foreach (const qreal el, der) {
-        result += el*el;
+    for (int i = 0; i < der.size(); i++) {
+        result += pow(der.at(i), 2)*m_dx.at(i);
     }
-    result *= dx;
     return result;
 }
 

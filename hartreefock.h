@@ -31,7 +31,6 @@ private:
     qreal integratedRdr2();
 
     QVector<qreal> differenciate(const QVector< qreal >& in) const;
-    QVector<qreal> phiDifferencial(const QVector< qreal >& in) const;
 
     QVector< qreal > normalize(const QVector< qreal >& vector) const;
     QVector< qreal > updateRho() const;
@@ -57,6 +56,7 @@ private:
     QVector<qreal> m_chisq;
     QVector<qreal> m_R;
     QVector<qreal> m_ri;
+    QVector<qreal> m_dx;
 
 };
 
