@@ -30,18 +30,21 @@ private:
     qreal calcNewE();
     qreal integratedRdr2();
 
-    QVector<qreal> differenciate(const QVector< qreal >& in) const;
+    qreal findLowestEigenValue();
 
+    QVector<qreal> differenciate(const QVector< qreal >& in) const;
     QVector< qreal > normalize(const QVector< qreal >& vector) const;
     QVector< qreal > updateRho() const;
 
     void printVector(const QVector< qreal >& vector) const;
 
-    qreal iterateE();
+    qreal iterateE(int iteration);
 
     void stabilizeE();
 
     QVector< qreal > updatePhi() const;
+
+    qreal m_energy, m_eigenvalue, m_iteration;
 
     qreal dx;
     int xmax, Z,l; // steps = xmax/dx
