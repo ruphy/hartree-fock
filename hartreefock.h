@@ -32,9 +32,11 @@ private:
 
     qreal findLowestEigenValue();
 
+    qreal simpsonIntegrate(const QVector< qreal >& in) const;
+    
     QVector<qreal> differenciate(const QVector< qreal >& in) const;
     QVector< qreal > normalize(const QVector< qreal >& vector) const;
-    QVector< qreal > updateRho() const;
+    QVector< qreal > updateRho(bool average);
 
     void printVector(const QVector< qreal >& vector) const;
 
@@ -46,7 +48,10 @@ private:
 
     qreal m_energy, m_eigenvalue, m_iteration;
 
-    qreal dx;
+    qreal fakedx;
+
+    int n_elett;
+
     int xmax, Z,l; // steps = xmax/dx
     int m_steps;
     qreal m,hbar,e;
@@ -55,7 +60,7 @@ private:
     TFile *debugFile;
     TTree *m_tree;
 #endif
-    
+
     QVector<qreal> m_rho;
     QVector<qreal> m_phi;
     QVector<qreal> m_chisq;
