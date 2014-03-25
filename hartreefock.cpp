@@ -271,7 +271,7 @@ qreal hartreefock::energyForNL(int n, int l)
                     }
                     qreal A2 = simpsonIntegrate(partIntegrand);
 
-                    qreal A3 = pow(m_ri, lambda);
+                    qreal A3 = pow(m_ri.at(i), lambda);
 
                     QVector<qreal> partIntegrand2(m_Rnl.size()); // will contain only values 0 -> r
                     for (int j = 0; j < m_Rnl.size(); j++) { // j -> rp
@@ -288,7 +288,7 @@ qreal hartreefock::energyForNL(int n, int l)
             }
         }
 
-        integrand *= sum;
+        integrand[i] *= sum;
     }
 
     energy += simpsonIntegrate(integrand);
