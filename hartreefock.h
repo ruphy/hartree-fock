@@ -30,9 +30,11 @@ private:
     qreal calcNewE();
     qreal integratedRdr2();
 
+    int factorial(int n) { return (n <= 1 ) ? 1 : factorial(n - 1) * n; }
+
     qreal findLowestEigenValue();
 
-    qreal simpsonIntegrate(const QVector< qreal >& in) const;
+    qreal simpsonIntegrate(const QVector< qreal >& in, int step = -1) const;
     
     QVector<qreal> differenciate(const QVector< qreal >& in) const;
     QVector< qreal > normalize(const QVector< qreal >& vector) const;
@@ -45,6 +47,10 @@ private:
     void stabilizeE();
 
     QVector< qreal > updatePhi() const;
+
+    QList< QList< QVector<qreal> > > m_Rnl;
+
+    qreal energyForNL(int n, int l);
 
     qreal m_energy, m_eigenvalue, m_iteration;
 

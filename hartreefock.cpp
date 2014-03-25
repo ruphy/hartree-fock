@@ -143,10 +143,14 @@ qreal hartreefock::phiIntegrand(int stepRPrime, qreal r) const
            m_rho.at(stepRPrime)/fabs(r-m_ri.at(stepRPrime));
 }
 
-qreal hartreefock::simpsonIntegrate(const QVector< qreal >& in) const
+qreal hartreefock::simpsonIntegrate(const QVector< qreal >& in, int step) const
 {
+    int maxstep = step;
+    if (maxstep == -1 || maxstep > in.size()) {
+        maxstep = in.size();
+    }
     qreal risultato = 0;
-    for (int i = 0; i < in.size()-5; i+=4) {
+    for (int i = 0; i < maxstep-5; i+=4) {
         qreal tempint = 0;
         qreal dx = (m_ri.at(i+4)-m_ri.at(i))*2/45.;
         tempint += in.at(i)*7;
@@ -214,6 +218,82 @@ qreal hartreefock::calcNewE()
     Energy += p1+p2;
 
     return Energy;
+}
+
+qreal hartreefock::energyForNL(int n, int l)
+{
+    qreal energy = 0;
+    QVector< qreal > Rnl = m_Rnl[n][l];
+
+    // E1
+    QVector<qreal> one = differenciate(Rnl);
+    for (int i = 0; i < one.size(); i++) {
+        one[i] = pow(one.at(i), 2);
+        one[i] += l*(l+1)*pow(Rnl.at(i),2)/pow(m_ri.at(i),2);
+    }
+    energy += simpsonIntegrate(one)/2.;
+
+    // E2
+    QVector<qreal> integrand(Rnl.size());
+    for (int i = 0; i < Rnl.size(); i++) {
+        integrand[i] = pow(Rnl.at(i),2);
+        integrand[i] *= (-Z/m_ri.at(i)+m_phi.at(i));
+    }
+    energy += simpsonIntegrate(integrand);
+
+
+
+    for (int i = 0; i < Rnl.size(); i++) {
+
+        integrand[i] = Rnl.at(i);
+        qreal sum = 0;
+
+        for (int np = 0; np < n; n++) {
+            for (int lp = 0; lp < l; l++) {
+
+                qreal Nnpnl = n*l; // FIXME
+                qreal A = 0;
+
+                QVector<qreal> Rnplp = m_Rnl.at(np).at(lp);
+
+                // (A)
+                for (int lambda = abs(l-lp); lambda <= l+lp; lambda++) {
+                    qreal P = (l+lambda+lp)/2.;
+                    // A1
+                    qreal A1 = factorial(-l+lp+lambda)*factorial(l-lp+lambda)*factorial(l+lp-lambda);
+                    A1 /= (factorial(l+lp+lambda+1)*factorial(P-l)*factorial(P-lp)*factorial(P-lambda));
+                    A1 *= A1;
+
+                    QVector<qreal> partIntegrand(i); // will contain only values 0 -> r
+                    for (int j = 0; j < i; j++) { // j -> rp
+                        partIntegrand[j] = Rnplp.at(j)*
+                                           Rnl.at(j)*pow(m_ri.at(j), lambda);
+                    }
+                    qreal A2 = simpsonIntegrate(partIntegrand);
+
+                    qreal A3 = pow(m_ri, lambda);
+
+                    QVector<qreal> partIntegrand2(m_Rnl.size()); // will contain only values 0 -> r
+                    for (int j = 0; j < m_Rnl.size(); j++) { // j -> rp
+                        partIntegrand2[j] = Rnplp.at(i)*
+                                            Rnl.at(j)/pow(m_ri.at(j), lambda+1);
+                    }
+
+                    A3 *= simpsonIntegrate(partIntegrand2);
+
+                    A += A1*A2/pow(m_ri.at(i), lambda+1) + A3;
+                }
+
+                sum += -0.5*Rnl.at(i)*Nnpnl*A;
+            }
+        }
+
+        integrand *= sum;
+    }
+
+    energy += simpsonIntegrate(integrand);
+
+    return energy;
 }
 
 qreal hartreefock::findLowestEigenValue()
