@@ -13,15 +13,6 @@ public:
     hartreefock();
     virtual ~hartreefock();
 
-    qreal rho0(qreal r);
-    qreal phi(qreal r);
-
-    qreal integrate(void *f);
-
-
-private slots:
-    void output();
-
 private:
     qreal R0(qreal );
     qreal doNumerov(qreal E, bool setR);
@@ -39,10 +30,13 @@ private:
     QVector<qreal> differenciate(const QVector< qreal >& in) const;
     QVector< qreal > normalize(const QVector< qreal >& vector) const;
     QVector< qreal > updateRho(bool average);
+    QVector< qreal > updateManyRho(bool average);
 
     void printVector(const QVector< qreal >& vector) const;
 
     qreal iterateE(int iteration);
+
+    void manyElectrons();
 
     void stabilizeE();
 
@@ -58,14 +52,12 @@ private:
 
     int n_elett;
 
-    int xmax, Z,l; // steps = xmax/dx
+    int xmax, Z,l;
     int m_steps;
     qreal m,hbar,e;
 
-#ifdef ROOT
     TFile *debugFile;
     TTree *m_tree;
-#endif
 
     QVector<qreal> m_rho;
     QVector<qreal> m_phi;
