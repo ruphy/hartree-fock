@@ -48,7 +48,7 @@ private:
 
     qreal m_energy, m_eigenvalue, m_iteration;
 
-    qreal fakedx;
+    qreal meshseed;
 
     int n_elett;
 

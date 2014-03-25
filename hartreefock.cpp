@@ -30,28 +30,27 @@ hartreefock::hartreefock()
     m = 1;
     l = 0; // ang. momentum
     hbar = sqrt(7.6359);
-    Z = 2;
+    Z = 1;
     xmax = 10/Z;
     n_elett = 2;
-    fakedx = 0.025/Z;
+    meshseed = 0.025/Z;
     e = sqrt(14.409);
-    m_steps = xmax/fakedx;
+    m_steps = xmax/meshseed;
 
 #ifdef ROOT
     debugFile = new TFile("out.root", "RECREATE", "An Example ROOT file");
     m_tree = new TTree("bTree", "tree title");
 #endif
 
-    qDebug() << xmax << fakedx << m_steps;
-    // mesh r[i] = [dx -> xmax, delta=dx]
+    qDebug() << xmax << meshseed << m_steps;
 
     m_rho.resize(m_steps);
     m_ri.resize(m_steps);
     m_dx.resize(m_steps);
 
     for (int i = 0; i < m_steps; i++) {
-        qreal x = fakedx + fakedx * i;
-        m_dx[i] = fakedx*exp(x)/Z;
+        qreal x = meshseed + meshseed * i;
+        m_dx[i] = meshseed*exp(x)/Z;
     }
 
     for (int i = 0; i < m_steps; i++) {
