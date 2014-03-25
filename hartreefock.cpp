@@ -251,7 +251,7 @@ qreal hartreefock::energyForNL(int n, int l)
         for (int np = 0; np < n; n++) {
             for (int lp = 0; lp < l; l++) {
 
-                qreal Nnpnl = 2*pow(np,2)/(2*(2*lp+1)); // FIXME
+                qreal Nnpnl = 2*pow(np,2)/(2*(2*lp+1));
                 qreal A = 0;
 
                 QVector<qreal> Rnplp = m_Rnl.at(np).at(lp);
